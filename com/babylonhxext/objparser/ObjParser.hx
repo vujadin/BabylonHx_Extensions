@@ -7,14 +7,15 @@ import com.babylonhx.math.Vector3;
 import com.babylonhx.math.Vector2;
 import com.babylonhx.mesh.Mesh;
 import com.babylonhx.Scene;
-import samples.objparser.ObjLine;
-import samples.objparser.MtlLine;
+import com.babylonhxext.objparser.ObjLine;
+import com.babylonhxext.objparser.MtlLine;
 import openfl.Assets;
 
 /**
  * ...
  * @author Krtolica Vujadin
  */
+
 class ObjParser {
 	
 	var lines:Array<ObjLine> = [];
@@ -246,8 +247,9 @@ class ObjParser {
 						currentMaterial.diffuseColor = line.toColor3();
 												
 					case MtlHeader.DiffuseTexture:
-						currentMaterial.diffuseColor = new Color3(1, 1, 1);
+						//currentMaterial.diffuseColor = new Color3(1, 1, 1);
 						currentMaterial.diffuseTexture = new Texture(_rootUrl + line.tokens[1], scene);
+						currentMaterial.diffuseTexture.hasAlpha = true;
 						currentMaterial.useAlphaFromDiffuseTexture = true;
 						
 					case MtlHeader.BumpTexture:
