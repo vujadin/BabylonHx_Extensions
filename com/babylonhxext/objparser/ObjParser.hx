@@ -7,9 +7,10 @@ import com.babylonhx.math.Vector3;
 import com.babylonhx.math.Vector2;
 import com.babylonhx.mesh.Mesh;
 import com.babylonhx.Scene;
+import com.babylonhx.tools.Tools;
 import com.babylonhxext.objparser.ObjLine;
 import com.babylonhxext.objparser.MtlLine;
-import openfl.Assets;
+import snow.assets.AssetText;
 
 /**
  * ...
@@ -49,63 +50,66 @@ class ObjParser {
 		_scene = scene;
 		_rootUrl = rootUrl;
 		
-		var objFile = Assets.getText(rootUrl + file);
-		var _lns = objFile.split("\n");
-		
-		var currentProgression:Int = 0;
-		var total:Int = _lns.length;
-		var currentName:String = "";
-		var currentMaterial:StandardMaterial = null;
-		
-		for (l in _lns) {
-			lines.push(new ObjLine(l));
-		}
-		
-		if (lines[0].tokens[0] == lines[0].blockSeparator) {
-			appendNewPart(currentName, currentMaterial);
-		}
-		
-		for (line in lines) {
+		Tools.LoadFile(rootUrl + file, function(content:AssetText) {
+			var objFile:String = content.text;
 			
-			switch(line.header) {
-				case ObjHeader.Vertices:
-					positions.push(line.toVector3());
-					
-				case ObjHeader.TextureCoordinates:
-					textureCoordinates.push(line.toVector2());
-					
-				case ObjHeader.Normals:
-					normals.push(line.toVector3());
-					
-				case ObjHeader.Group:
-					currentName = line.tokens.length > 1 ? line.tokens[1] : "noname";
-					
-				case ObjHeader.Faces:
-					appendFace(line);
-					
-				case ObjHeader.MaterialLibrary:
-					importMaterialLibrary(line, scene);
-					
-				case ObjHeader.Material:
-					var materialName:String = line.tokens[1];
-					currentMaterial = materials.get(materialName);
-					
-				default:
-			}
-		}
+			var _lns = objFile.split("\n");
 		
-		if (positions.length > 0) {
-			appendNewPart(currentName, currentMaterial);
-		}
-		
-		//if (meshPartsNum > 1) {
-			//var proxyID = ProxyMesh.CreateBabylonMesh(currentName, scene);
-			for (key in meshParts.keys()) {
-				_meshes.push(meshParts.get(key).createMesh(scene));// , proxyID);
+			var currentProgression:Int = 0;
+			var total:Int = _lns.length;
+			var currentName:String = "";
+			var currentMaterial:StandardMaterial = null;
+			
+			for (l in _lns) {
+				lines.push(new ObjLine(l));
 			}
-		//} else {
-		//	meshParts.Values.First().CreateBabylonMesh(scene);
-		//}
+			
+			if (lines[0].tokens[0] == lines[0].blockSeparator) {
+				appendNewPart(currentName, currentMaterial);
+			}
+			
+			for (line in lines) {
+				
+				switch(line.header) {
+					case ObjHeader.Vertices:
+						positions.push(line.toVector3());
+						
+					case ObjHeader.TextureCoordinates:
+						textureCoordinates.push(line.toVector2());
+						
+					case ObjHeader.Normals:
+						normals.push(line.toVector3());
+						
+					case ObjHeader.Group:
+						currentName = line.tokens.length > 1 ? line.tokens[1] : "noname";
+						
+					case ObjHeader.Faces:
+						appendFace(line);
+						
+					case ObjHeader.MaterialLibrary:
+						importMaterialLibrary(line, scene);
+						
+					case ObjHeader.Material:
+						var materialName:String = line.tokens[1];
+						currentMaterial = materials.get(materialName);
+						
+					default:
+				}
+			}
+			
+			if (positions.length > 0) {
+				appendNewPart(currentName, currentMaterial);
+			}
+			
+			//if (meshPartsNum > 1) {
+				//var proxyID = ProxyMesh.CreateBabylonMesh(currentName, scene);
+				for (key in meshParts.keys()) {
+					_meshes.push(meshParts.get(key).createMesh(scene));// , proxyID);
+				}
+			//} else {
+			//	meshParts.Values.First().CreateBabylonMesh(scene);
+			//}
+		}, "text");		
 	}
 	
 	function appendFace(line:ObjLine) {
@@ -226,62 +230,65 @@ class ObjParser {
 		for (i in 1...materialLine.tokens.length) {
 			var fileName = materialLine.tokens[i];
 			
-			var mtlFile = Assets.getText(_rootUrl + fileName);
-			var mtlLines:Array<String> = mtlFile.split("\n");
-			
-			var mtlDocument:Array<MtlLine> = [];			
-			for (line in mtlLines) {
-				mtlDocument.push(new MtlLine(line));
-			}
-			
-			var currentMaterial:StandardMaterial = null;
-			
-			for (line in mtlDocument) {
-				switch (line.header) {
-					case MtlHeader.Material:
-						currentMaterial = new StandardMaterial(line.tokens[1], scene);
-						currentMaterial.backFaceCulling = false;
-						materials.set(currentMaterial.name, currentMaterial);
-						
-					case MtlHeader.DiffuseColor:
-						currentMaterial.diffuseColor = line.toColor3();
-												
-					case MtlHeader.DiffuseTexture:
-						//currentMaterial.diffuseColor = new Color3(1, 1, 1);
-						currentMaterial.diffuseTexture = new Texture(_rootUrl + line.tokens[1], scene);
-						currentMaterial.diffuseTexture.hasAlpha = true;
-						currentMaterial.useAlphaFromDiffuseTexture = true;
-						
-					case MtlHeader.BumpTexture:
-						currentMaterial.bumpTexture = new Texture(_rootUrl + line.tokens[1], scene);
-						
-					case MtlHeader.AmbientTexture:
-						currentMaterial.ambientTexture = new Texture(_rootUrl + line.tokens[1], scene);
-						
-					case MtlHeader.SpecularTexture:
-						currentMaterial.specularTexture = new Texture(_rootUrl + line.tokens[1], scene);
-						
-					case MtlHeader.ReflectionTexture:
-						currentMaterial.reflectionTexture = new Texture(_rootUrl + line.tokens[1], scene);
-										
-					case MtlHeader.Alpha:
-						currentMaterial.alpha = line.toFloat();
-						
-					case MtlHeader.AmbientColor:
-						currentMaterial.ambientColor = line.toColor3();
-						
-					case MtlHeader.EmissiveColor:
-						currentMaterial.emissiveColor = line.toColor3();
-						
-					case MtlHeader.SpecularColor:
-						currentMaterial.specularColor = line.toColor3();
-						
-					case MtlHeader.SpecularPower:
-						currentMaterial.specularPower = cast line.toFloat();
-						
-					default:
+			Tools.LoadFile(_rootUrl + fileName, function(content:AssetText) {
+				var mtlFile:String = content.text;
+				
+				var mtlLines:Array<String> = mtlFile.split("\n");
+				
+				var mtlDocument:Array<MtlLine> = [];			
+				for (line in mtlLines) {
+					mtlDocument.push(new MtlLine(line));
 				}
-			}
+				
+				var currentMaterial:StandardMaterial = null;
+				
+				for (line in mtlDocument) {
+					switch (line.header) {
+						case MtlHeader.Material:
+							currentMaterial = new StandardMaterial(line.tokens[1], scene);
+							currentMaterial.backFaceCulling = false;
+							materials.set(currentMaterial.name, currentMaterial);
+							
+						case MtlHeader.DiffuseColor:
+							currentMaterial.diffuseColor = line.toColor3();
+													
+						case MtlHeader.DiffuseTexture:
+							//currentMaterial.diffuseColor = new Color3(1, 1, 1);
+							currentMaterial.diffuseTexture = new Texture(_rootUrl + line.tokens[1], scene);
+							/*currentMaterial.diffuseTexture.hasAlpha = true;
+							currentMaterial.useAlphaFromDiffuseTexture = true;*/
+							
+						case MtlHeader.BumpTexture:
+							currentMaterial.bumpTexture = new Texture(_rootUrl + line.tokens[1], scene);
+							
+						case MtlHeader.AmbientTexture:
+							currentMaterial.ambientTexture = new Texture(_rootUrl + line.tokens[1], scene);
+							
+						case MtlHeader.SpecularTexture:
+							currentMaterial.specularTexture = new Texture(_rootUrl + line.tokens[1], scene);
+							
+						case MtlHeader.ReflectionTexture:
+							currentMaterial.reflectionTexture = new Texture(_rootUrl + line.tokens[1], scene);
+											
+						case MtlHeader.Alpha:
+							currentMaterial.alpha = line.toFloat();
+							
+						case MtlHeader.AmbientColor:
+							currentMaterial.ambientColor = line.toColor3();
+							
+						case MtlHeader.EmissiveColor:
+							currentMaterial.emissiveColor = line.toColor3();
+							
+						case MtlHeader.SpecularColor:
+							currentMaterial.specularColor = line.toColor3();
+							
+						case MtlHeader.SpecularPower:
+							currentMaterial.specularPower = cast line.toFloat();
+							
+						default:
+					}
+				}
+			}, "text");			
 		}
 	}
 	
