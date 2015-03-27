@@ -40,6 +40,7 @@ enum ObjHeader {
 class ObjLine extends Line {
 	
 	public var header(get, never):ObjHeader;
+	
 
 	public function new(data:String) {
 		super(data);

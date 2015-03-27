@@ -1,16 +1,17 @@
 package com.babylonhxext.objparser;
 
+import com.babylonhx.materials.MultiMaterial;
 import com.babylonhx.materials.StandardMaterial;
 import com.babylonhx.materials.textures.Texture;
 import com.babylonhx.math.Color3;
 import com.babylonhx.math.Vector3;
 import com.babylonhx.math.Vector2;
 import com.babylonhx.mesh.Mesh;
+import com.babylonhx.mesh.SubMesh;
 import com.babylonhx.Scene;
 import com.babylonhx.tools.Tools;
 import com.babylonhxext.objparser.ObjLine;
 import com.babylonhxext.objparser.MtlLine;
-import snow.assets.AssetText;
 
 /**
  * ...
@@ -20,6 +21,8 @@ import snow.assets.AssetText;
 class ObjParser {
 	
 	var lines:Array<ObjLine> = [];
+	
+	var lastLine:String = "";
 	
 	var positions:Array<Vector3> = [];
 	var normals:Array<Vector3> = [];
@@ -45,13 +48,18 @@ class ObjParser {
 	function get_meshes():Array<Mesh> {
 		return _meshes;
 	}
+	
+	var _subMeshesIndices:Array<Array<Int>> = []; 
+	var _activeSubMesh:Int = 0;
 
 	public function new(rootUrl:String, file:String, scene:Scene) {
+		_subMeshesIndices.push([0, 0]);
+		
 		_scene = scene;
 		_rootUrl = rootUrl;
 		
-		Tools.LoadFile(rootUrl + file, function(content:AssetText) {
-			var objFile:String = content.text;
+		Tools.LoadFile(rootUrl + file, function(content:String) {
+			var objFile:String = content;
 			
 			var _lns = objFile.split("\n");
 		
@@ -73,25 +81,37 @@ class ObjParser {
 				switch(line.header) {
 					case ObjHeader.Vertices:
 						positions.push(line.toVector3());
+						lastLine = "vertices";
 						
 					case ObjHeader.TextureCoordinates:
 						textureCoordinates.push(line.toVector2());
+						lastLine = "texturecoords";
 						
 					case ObjHeader.Normals:
 						normals.push(line.toVector3());
+						lastLine = "normals";
 						
 					case ObjHeader.Group:
 						currentName = line.tokens.length > 1 ? line.tokens[1] : "noname";
+						lastLine = "group";
 						
 					case ObjHeader.Faces:
 						appendFace(line);
+						lastLine = "faces";
 						
 					case ObjHeader.MaterialLibrary:
 						importMaterialLibrary(line, scene);
+						lastLine = "matlib";
 						
 					case ObjHeader.Material:
 						var materialName:String = line.tokens[1];
 						currentMaterial = materials.get(materialName);
+						if (lastLine == "faces") {
+							// we probably have to create submeshes ...
+							_subMeshesIndices.push([_activeSubMesh, _activeSubMesh]);
+							++_activeSubMesh;
+						}
+						lastLine = "mat";
 						
 					default:
 				}
@@ -104,7 +124,29 @@ class ObjParser {
 			//if (meshPartsNum > 1) {
 				//var proxyID = ProxyMesh.CreateBabylonMesh(currentName, scene);
 				for (key in meshParts.keys()) {
-					_meshes.push(meshParts.get(key).createMesh(scene));// , proxyID);
+					var newMesh:Mesh = meshParts.get(key).createMesh(scene);
+					/*trace(_subMeshesIndices.length);
+					if (_subMeshesIndices.length > 1) {
+						for (i in 0..._subMeshesIndices.length) {
+							newMesh.subMeshes.push(new SubMesh(i, 0, newMesh.getTotalVertices(), _subMeshesIndices[i][0], _subMeshesIndices[i][1], newMesh));
+						}
+					}
+					var materialCount:Int = 0;
+					for (key in materials.keys()) {
+						++materialCount;
+					}
+					if (materialCount > 1) {
+						trace(materialCount);
+						var multimaterial = new MultiMaterial("multimat", scene);
+						for (key in materials.keys()) {
+							multimaterial.subMaterials.push(materials.get(key));
+						}
+						newMesh.material = multimaterial;
+					}*/
+					for (key in materials.keys()) {
+						trace(materials.get(key).diffuseTexture.url);
+					}
+					_meshes.push(newMesh);// , proxyID);
 				}
 			//} else {
 			//	meshParts.Values.First().CreateBabylonMesh(scene);
@@ -180,6 +222,7 @@ class ObjParser {
 			stagingVertices.push(vertex);
 			vertexIndex = stagingVertices.length - 1;
 			registeredVertices.set(hash, vertexIndex);
+			_subMeshesIndices[_activeSubMesh][1] = vertexIndex;
 		} else {
 			vertexIndex = registeredVertices.get(hash);
 		}
@@ -230,8 +273,8 @@ class ObjParser {
 		for (i in 1...materialLine.tokens.length) {
 			var fileName = materialLine.tokens[i];
 			
-			Tools.LoadFile(_rootUrl + fileName, function(content:AssetText) {
-				var mtlFile:String = content.text;
+			Tools.LoadFile(_rootUrl + fileName, function(content:String) {
+				var mtlFile:String = content;
 				
 				var mtlLines:Array<String> = mtlFile.split("\n");
 				
@@ -255,8 +298,6 @@ class ObjParser {
 						case MtlHeader.DiffuseTexture:
 							//currentMaterial.diffuseColor = new Color3(1, 1, 1);
 							currentMaterial.diffuseTexture = new Texture(_rootUrl + line.tokens[1], scene);
-							/*currentMaterial.diffuseTexture.hasAlpha = true;
-							currentMaterial.useAlphaFromDiffuseTexture = true;*/
 							
 						case MtlHeader.BumpTexture:
 							currentMaterial.bumpTexture = new Texture(_rootUrl + line.tokens[1], scene);
@@ -283,7 +324,7 @@ class ObjParser {
 							currentMaterial.specularColor = line.toColor3();
 							
 						case MtlHeader.SpecularPower:
-							currentMaterial.specularPower = cast line.toFloat();
+							currentMaterial.specularPower = line.toFloat();
 							
 						default:
 					}
