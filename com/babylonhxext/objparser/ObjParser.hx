@@ -42,6 +42,7 @@ class ObjParser {
 	
 	var _scene:Scene;
 	var _rootUrl:String;
+	var _objFile:String;
 	
 	var _meshes:Array<Mesh> = [];
 	public var meshes(get, never):Array<Mesh>;
@@ -56,13 +57,16 @@ class ObjParser {
 		_subMeshesIndices.push([0, 0]);
 		
 		_scene = scene;
-		_rootUrl = rootUrl;
-		
-		Tools.LoadFile(rootUrl + file, function(content:String) {
-			var objFile:String = content;
+		_rootUrl = rootUrl;		
+		_objFile = file;
+	}
+	
+	public function load(?onLoad:Array<Mesh>->Void) {
+		Tools.LoadFile(_rootUrl + _objFile, function(content:Dynamic) {
+			var objFile:String = cast content;
 			
 			var _lns = objFile.split("\n");
-		
+			
 			var currentProgression:Int = 0;
 			var total:Int = _lns.length;
 			var currentName:String = "";
@@ -100,7 +104,7 @@ class ObjParser {
 						lastLine = "faces";
 						
 					case ObjHeader.MaterialLibrary:
-						importMaterialLibrary(line, scene);
+						importMaterialLibrary(line, _scene);
 						lastLine = "matlib";
 						
 					case ObjHeader.Material:
@@ -122,9 +126,9 @@ class ObjParser {
 			}
 			
 			//if (meshPartsNum > 1) {
-				//var proxyID = ProxyMesh.CreateBabylonMesh(currentName, scene);
+				//var proxyID = ProxyMesh.CreateBabylonMesh(currentName, _scene);
 				for (key in meshParts.keys()) {
-					var newMesh:Mesh = meshParts.get(key).createMesh(scene);
+					var newMesh:Mesh = meshParts.get(key).createMesh(_scene);
 					/*trace(_subMeshesIndices.length);
 					if (_subMeshesIndices.length > 1) {
 						for (i in 0..._subMeshesIndices.length) {
@@ -137,21 +141,23 @@ class ObjParser {
 					}
 					if (materialCount > 1) {
 						trace(materialCount);
-						var multimaterial = new MultiMaterial("multimat", scene);
+						var multimaterial = new MultiMaterial("multimat", _scene);
 						for (key in materials.keys()) {
 							multimaterial.subMaterials.push(materials.get(key));
 						}
 						newMesh.material = multimaterial;
 					}*/
-					for (key in materials.keys()) {
-						trace(materials.get(key).diffuseTexture.url);
-					}
+			
 					_meshes.push(newMesh);// , proxyID);
 				}
 			//} else {
-			//	meshParts.Values.First().CreateBabylonMesh(scene);
+			//	meshParts.Values.First().CreateBabylonMesh(_scene);
 			//}
-		}, "text");		
+			
+			if (onLoad != null) {
+				onLoad(_meshes);
+			}
+		}, "");
 	}
 	
 	function appendFace(line:ObjLine) {
@@ -289,7 +295,7 @@ class ObjParser {
 					switch (line.header) {
 						case MtlHeader.Material:
 							currentMaterial = new StandardMaterial(line.tokens[1], scene);
-							currentMaterial.backFaceCulling = false;
+							currentMaterial.backFaceCulling = true;
 							materials.set(currentMaterial.name, currentMaterial);
 							
 						case MtlHeader.DiffuseColor:
