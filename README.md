@@ -7,6 +7,7 @@ Extensions/plugins for BabylonHx
 // first param: root url (contains obj, mtl files as well as textures)
 // seccond param: file name
 // third param: scene object
-var objParser = new ObjParser("models/obj/", "model.obj", scene);
-// access meshes via objParser.meshes
-```
+var objLoader = new ObjLoader(scene);
+objLoader.load("assets/models/", "mesh.obj", function(meshes:Array<Mesh>) {
+	...
+});
