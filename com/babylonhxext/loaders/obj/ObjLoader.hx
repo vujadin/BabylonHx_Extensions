@@ -1,4 +1,4 @@
-package com.babylonhxext.objparser;
+package com.babylonhxext.loaders.obj;
 
 import com.babylonhx.materials.MultiMaterial;
 import com.babylonhx.materials.StandardMaterial;
@@ -10,15 +10,15 @@ import com.babylonhx.mesh.Mesh;
 import com.babylonhx.mesh.SubMesh;
 import com.babylonhx.Scene;
 import com.babylonhx.tools.Tools;
-import com.babylonhxext.objparser.ObjLine;
-import com.babylonhxext.objparser.MtlLine;
+import com.babylonhxext.loaders.obj.ObjLine;
+import com.babylonhxext.loaders.obj.MtlLine;
 
 /**
  * ...
  * @author Krtolica Vujadin
  */
 
-class ObjParser {
+class ObjLoader {
 	
 	var lines:Array<ObjLine> = [];
 	
@@ -42,7 +42,7 @@ class ObjParser {
 	
 	var _scene:Scene;
 	var _rootUrl:String;
-	var _objFile:String;
+	var _file:String;
 	
 	var _meshes:Array<Mesh> = [];
 	public var meshes(get, never):Array<Mesh>;
@@ -53,16 +53,16 @@ class ObjParser {
 	var _subMeshesIndices:Array<Array<Int>> = []; 
 	var _activeSubMesh:Int = 0;
 
-	public function new(rootUrl:String, file:String, scene:Scene) {
-		_subMeshesIndices.push([0, 0]);
-		
+	public function new(scene:Scene) {
+		_subMeshesIndices.push([0, 0]);		
 		_scene = scene;
-		_rootUrl = rootUrl;		
-		_objFile = file;
 	}
 	
-	public function load(?onLoad:Array<Mesh>->Void) {
-		Tools.LoadFile(_rootUrl + _objFile, function(content:Dynamic) {
+	public function load(rootUrl:String, file:String, ?onLoad:Array<Mesh>->Void) {
+		this._rootUrl = rootUrl;
+		this._file = file;
+		
+		Tools.LoadFile(rootUrl + file, function(content:Dynamic) {
 			var objFile:String = cast content;
 			
 			var _lns = objFile.split("\n");
@@ -83,6 +83,9 @@ class ObjParser {
 			for (line in lines) {
 				
 				switch(line.header) {
+					case ObjHeader.Object:
+						
+					
 					case ObjHeader.Vertices:
 						positions.push(line.toVector3());
 						lastLine = "vertices";
@@ -125,34 +128,10 @@ class ObjParser {
 				appendNewPart(currentName, currentMaterial);
 			}
 			
-			//if (meshPartsNum > 1) {
-				//var proxyID = ProxyMesh.CreateBabylonMesh(currentName, _scene);
-				for (key in meshParts.keys()) {
-					var newMesh:Mesh = meshParts.get(key).createMesh(_scene);
-					/*trace(_subMeshesIndices.length);
-					if (_subMeshesIndices.length > 1) {
-						for (i in 0..._subMeshesIndices.length) {
-							newMesh.subMeshes.push(new SubMesh(i, 0, newMesh.getTotalVertices(), _subMeshesIndices[i][0], _subMeshesIndices[i][1], newMesh));
-						}
-					}
-					var materialCount:Int = 0;
-					for (key in materials.keys()) {
-						++materialCount;
-					}
-					if (materialCount > 1) {
-						trace(materialCount);
-						var multimaterial = new MultiMaterial("multimat", _scene);
-						for (key in materials.keys()) {
-							multimaterial.subMaterials.push(materials.get(key));
-						}
-						newMesh.material = multimaterial;
-					}*/
-			
-					_meshes.push(newMesh);// , proxyID);
-				}
-			//} else {
-			//	meshParts.Values.First().CreateBabylonMesh(_scene);
-			//}
+			for (key in meshParts.keys()) {
+				var newMesh:Mesh = meshParts.get(key).createMesh(_scene);		
+				_meshes.push(newMesh);
+			}
 			
 			if (onLoad != null) {
 				onLoad(_meshes);
@@ -229,7 +208,8 @@ class ObjParser {
 			vertexIndex = stagingVertices.length - 1;
 			registeredVertices.set(hash, vertexIndex);
 			_subMeshesIndices[_activeSubMesh][1] = vertexIndex;
-		} else {
+		} 
+		else {
 			vertexIndex = registeredVertices.get(hash);
 		}
 		
@@ -255,7 +235,8 @@ class ObjParser {
 			part = new PreMesh(currentMaterial == defaultMaterial ? null : currentMaterial);
 			meshParts.set(currentMaterial.name, part);
 			meshPartsNum++;
-		} else {
+		} 
+		else {
 			part = meshParts.get(currentMaterial.name);
 		}
 		

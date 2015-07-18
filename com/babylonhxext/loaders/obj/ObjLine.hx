@@ -1,4 +1,4 @@
-package com.babylonhxext.objparser;
+package com.babylonhxext.loaders.obj;
 
 /**
  * ...

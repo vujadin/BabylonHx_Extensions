@@ -1,4 +1,4 @@
-package com.babylonhxext.objparser;
+package com.babylonhxext.loaders.obj;
 
 import com.babylonhx.math.Color3;
 import com.babylonhx.math.Vector2;
@@ -15,6 +15,7 @@ class Line {
 	public var isValid(get, never):Bool;
 	public var isComment(get, never):Bool;	
 	public var blockSeparator(get, never):String;
+	
 
 	public function new(data:String) {
 		setLine(data);

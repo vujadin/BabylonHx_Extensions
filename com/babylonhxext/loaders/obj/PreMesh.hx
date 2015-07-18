@@ -1,4 +1,4 @@
-package com.babylonhxext.objparser;
+package com.babylonhxext.loaders.obj;
 
 import com.babylonhx.materials.StandardMaterial;
 import com.babylonhx.math.Vector3;
@@ -16,6 +16,7 @@ class PreMesh {
 	var indices:Array<Int> = [];
 	var material:StandardMaterial = null;
 	var concatenatedName:String = "";
+	
 
 	public function new(material:StandardMaterial) {
 		this.material = material;
@@ -37,14 +38,11 @@ class PreMesh {
 	}
 
 	public function createMesh(scene:Scene, parentID:String = null):Mesh {
-		var babylonMesh = new Mesh(concatenatedName, scene);
+		var babylonMesh:Mesh = new Mesh(concatenatedName, scene);
 		
-		var vertexData = new VertexData();
-					
-		// Material ID
-		//if (material != null) {
-			babylonMesh.material = material;
-		//}
+		var vertexData:VertexData = new VertexData();
+		
+		babylonMesh.material = material;
 			
 		// Vertices
 		var positions:Array<Float> = [];
@@ -52,7 +50,6 @@ class PreMesh {
 		var uvs:Array<Float> = [];
 		
 		for (index in 0...vertices.length) {
-			//var position:Vector3 = vertices[index].GetPosition();			
 			vertices[index].DumpPositions(positions);
 			vertices[index].DumpNormals(normals);
 			vertices[index].DumpUVs(uvs);
@@ -61,7 +58,7 @@ class PreMesh {
 		if (positions.length > 0) {
 			vertexData.positions = positions;
 		}
-		if (normals.length > 0) {
+		if (normals.length > 0) {			
 			vertexData.normals = normals;
 		}
 		if (uvs.length > 0) {
@@ -69,9 +66,11 @@ class PreMesh {
 		}
 		
 		vertexData.indices = indices;
-				
+		
 		vertexData.applyToMesh(babylonMesh);
 		
+		babylonMesh.flipFaces(true);
+				
 		return babylonMesh;
 	}
 	

@@ -1,4 +1,4 @@
-package com.babylonhxext.objparser;
+package com.babylonhxext.loaders.obj;
 
 import com.babylonhx.math.Vector2;
 import com.babylonhx.math.Vector3;

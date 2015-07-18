@@ -1,4 +1,4 @@
-package com.babylonhxext.objparser;
+package com.babylonhxext.loaders.obj;
 
 /**
  * ...
@@ -97,10 +97,12 @@ class MtlLine extends Line {
 			case "map_refl":
 				return MtlHeader.ReflectionTexture;
 				
+			/*default:
+				trace("Usupported line type: " + lineType);*/
 		}
 		
 		return MtlHeader.None;
-		trace("Usupported line type: " + lineType);
+		
 	}
 	
 }
